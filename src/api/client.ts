@@ -34,7 +34,7 @@ export async function request<T>(
   const text = await res.text()
   const raw = text ? JSON.parse(text) : {}
   if (!res.ok) {
-    throw new Error(parseErrorResponse(raw))
+    throw new Error(await parseErrorResponse(raw))
   }
   return unwrapData<T>(raw)
 }

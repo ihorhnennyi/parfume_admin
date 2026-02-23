@@ -64,7 +64,7 @@ export async function createOrder(body: CreateOrderBody): Promise<OrderBackend> 
 }
 
 /** Создать тестовый заказ из первого товара (для админки) */
-export async function createTestOrder(accessToken: string): Promise<OrderBackend> {
+export async function createTestOrder(_accessToken: string): Promise<OrderBackend> {
   const { getProducts } = await import('./products')
   const products = await getProducts(true)
   if (!products.length) {

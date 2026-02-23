@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Box, Snackbar } from '@mui/material'
+import { Snackbar } from '@mui/material'
 import { OrdersToolbar } from './OrdersToolbar'
 import { OrdersFilter } from './OrdersFilter'
 import { OrdersTable } from './OrdersTable'
