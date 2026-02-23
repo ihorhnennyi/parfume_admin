@@ -1,0 +1,8 @@
+export { ProductsPage } from './ProductsPage'
+export { ProductDetailPage } from './ProductDetailPage'
+export { ProductsToolbar } from './ProductsToolbar'
+export { ProductsFilter } from './ProductsFilter'
+export { ProductsTable } from './ProductsTable'
+export { ProductFormModal } from './ProductFormModal'
+export { DeleteProductDialog } from './DeleteProductDialog'
+export { ProductImageList } from './ProductImageList'
