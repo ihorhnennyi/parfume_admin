@@ -57,12 +57,17 @@ export function ProductImageList({
               overflow: 'hidden',
               border: 1,
               borderColor: 'divider',
+              bgcolor: 'action.hover',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <img
+            <Box
+              component="img"
               src={getUploadUrl(src)}
               alt=""
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              sx={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
             />
             <IconButton
               size="small"

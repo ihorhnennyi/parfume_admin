@@ -38,9 +38,16 @@ import type { Translation } from '../../types/category'
 const emptyTranslation = (): Translation => ({ ua: '', ru: '', en: '' })
 const emptyPrice = (): ProductPriceBackend => ({ current: 0, currency: 'UAH' })
 
-function emptyVariant(): ProductVariantBackend {
+const DEFAULT_VARIANT_NAMES: Translation[] = [
+  { ua: '10 мл', ru: '10 мл', en: '10 ml' },
+  { ua: '50 мл', ru: '50 мл', en: '50 ml' },
+  { ua: '100 мл', ru: '100 мл', en: '100 ml' },
+]
+
+function emptyVariant(index: number = 0): ProductVariantBackend {
+  const defaultName = DEFAULT_VARIANT_NAMES[index] ?? emptyTranslation()
   return {
-    name: emptyTranslation(),
+    name: defaultName,
     price: emptyPrice(),
     sku: '',
     stock: 0,
@@ -99,7 +106,12 @@ function productToFormState(b: ProductBackend | null): {
           typeof c === 'string' ? c : (c as { _id?: string })?._id ?? '',
         ).filter(Boolean)
       : [],
-    variants: Array.isArray(b.variants) ? b.variants : [],
+    variants: Array.isArray(b.variants)
+      ? b.variants.map((v: ProductVariantBackend) => ({
+          ...v,
+          isActive: v.isActive ?? true,
+        }))
+      : [],
     attributes: Array.isArray(b.attributes) ? b.attributes : [],
     sku: b.sku ?? '',
     stock: b.stock ?? 0,
@@ -128,6 +140,7 @@ export function ProductDetailPage() {
   const [uploadingVariantIndex, setUploadingVariantIndex] = useState<number | null>(null)
   const [variantUploadError, setVariantUploadError] = useState<string | null>(null)
   const [saveSuccessOpen, setSaveSuccessOpen] = useState(false)
+  const [imageError, setImageError] = useState<string | null>(null)
   const [images, setImages] = useState<string[]>([])
   const variantImageInputRef = useRef<HTMLInputElement>(null)
   const pendingVariantIndexRef = useRef<number | null>(null)
@@ -166,7 +179,11 @@ export function ProductDetailPage() {
         setPrice(form.price)
         setCategoryId(form.categoryId)
         setCategories(form.categories)
-        setVariants(form.variants)
+        setVariants(
+          form.variants.length > 0
+            ? form.variants
+            : [emptyVariant(0), emptyVariant(1), emptyVariant(2)],
+        )
         setAttributes(form.attributes)
         setSku(form.sku)
         setStock(form.stock)
@@ -281,12 +298,15 @@ export function ProductDetailPage() {
     if (!id) return
     const token = getAccessToken()
     if (!token) return
+    setImageError(null)
+    const previousImages = images
+    setImages((prev) => prev.filter((_, i) => i !== index))
     try {
       await productsApi.deleteProductImage(id, index, token)
-      setImages((prev) => prev.filter((_, i) => i !== index))
       await refetchProducts()
-    } catch {
-      // keep UI state
+    } catch (e) {
+      setImages(previousImages)
+      setImageError(e instanceof Error ? e.message : 'Не вдалося видалити фото')
     }
   }
 
@@ -311,6 +331,8 @@ export function ProductDetailPage() {
       }
       setUploadingVariantIndex(variantIndex)
       try {
+        // Сначала сохраняем варианты на сервер (если в БД их ещё нет — иначе "Variant index out of range")
+        await productsApi.updateProduct(id, { variants }, token)
         const updated = await productsApi.uploadVariantImage(id, variantIndex, file, token)
         syncVariantsFromProduct(updated)
         await refetchProducts()
@@ -321,7 +343,7 @@ export function ProductDetailPage() {
         if (variantImageInputRef.current) variantImageInputRef.current.value = ''
       }
     },
-    [id, getAccessToken, refetchProducts, syncVariantsFromProduct],
+    [id, getAccessToken, refetchProducts, syncVariantsFromProduct, variants],
   )
 
   const handleVariantImageFileChange = useCallback(
@@ -342,19 +364,30 @@ export function ProductDetailPage() {
       if (!id) return
       const token = getAccessToken()
       if (!token) return
+      setVariantUploadError(null)
+      const prevVariants = variants
+      setVariants((prev) =>
+        prev.map((v, i) =>
+          i === variantIndex ? { ...v, image: undefined } : v,
+        ),
+      )
       try {
+        await productsApi.updateProduct(id, { variants: prevVariants }, token)
         await productsApi.deleteVariantImage(id, variantIndex, token)
         const updated = await productsApi.getProduct(id)
         if (updated) syncVariantsFromProduct(updated)
         await refetchProducts()
-      } catch {
-        // keep UI state
+      } catch (e) {
+        setVariants(prevVariants)
+        setVariantUploadError(
+          e instanceof Error ? e.message : 'Не вдалося видалити фото варіанта',
+        )
       }
     },
-    [id, getAccessToken, refetchProducts, syncVariantsFromProduct],
+    [id, getAccessToken, refetchProducts, syncVariantsFromProduct, variants],
   )
 
-  const addVariant = () => setVariants((prev) => [...prev, emptyVariant()])
+  const addVariant = () => setVariants((prev) => [...prev, emptyVariant(prev.length)])
   const removeVariant = (index: number) =>
     setVariants((prev) => prev.filter((_, i) => i !== index))
   const updateVariant = (index: number, v: ProductVariantBackend) =>
@@ -582,12 +615,21 @@ export function ProductDetailPage() {
                               overflow: 'hidden',
                               border: 1,
                               borderColor: 'divider',
+                              bgcolor: 'action.hover',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
                             }}
                           >
-                            <img
+                            <Box
+                              component="img"
                               src={getUploadUrl(v.image)}
                               alt=""
-                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              sx={{
+                                maxWidth: '100%',
+                                maxHeight: '100%',
+                                objectFit: 'contain',
+                              }}
                             />
                             <IconButton
                               size="small"
@@ -811,6 +853,14 @@ export function ProductDetailPage() {
         onClose={() => setSaveSuccessOpen(false)}
         message="Сохранено"
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      />
+      <Snackbar
+        open={!!imageError}
+        autoHideDuration={5000}
+        onClose={() => setImageError(null)}
+        message={imageError ?? ''}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        ContentProps={{ sx: { bgcolor: 'error.main', color: 'error.contrastText' } }}
       />
     </Container>
   )

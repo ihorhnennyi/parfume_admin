@@ -31,8 +31,16 @@ import type { Translation } from '../../types/category'
 
 const emptyTranslation = (): Translation => ({ ua: '', ru: '', en: '' })
 const emptyPrice = (): ProductPriceBackend => ({ current: 0, currency: 'UAH' })
-function emptyVariant(): ProductVariantBackend {
-  return { name: emptyTranslation(), price: emptyPrice(), sku: '', stock: 0, isActive: true }
+
+const DEFAULT_VARIANT_NAMES: { ua: string; ru: string; en: string }[] = [
+  { ua: '10 мл', ru: '10 мл', en: '10 ml' },
+  { ua: '50 мл', ru: '50 мл', en: '50 ml' },
+  { ua: '100 мл', ru: '100 мл', en: '100 ml' },
+]
+
+function emptyVariant(index: number = 0): ProductVariantBackend {
+  const defaultName = DEFAULT_VARIANT_NAMES[index] ?? emptyTranslation()
+  return { name: defaultName, price: emptyPrice(), sku: '', stock: 0, isActive: true }
 }
 function emptyAttribute(): ProductAttributeBackend {
   return { name: emptyTranslation(), value: emptyTranslation(), unit: '' }
@@ -126,7 +134,7 @@ export function ProductFormModal({
       setIsNew(false)
       setIsFeatured(false)
       setIsOnSale(false)
-      setVariants([])
+      setVariants([emptyVariant(0), emptyVariant(1), emptyVariant(2)])
       setAttributes([])
     }
   }, [open, product])
@@ -158,7 +166,7 @@ export function ProductFormModal({
     )
   }
 
-  const addVariant = () => setVariants((prev) => [...prev, emptyVariant()])
+  const addVariant = () => setVariants((prev) => [...prev, emptyVariant(prev.length)])
   const removeVariant = (idx: number) => setVariants((prev) => prev.filter((_, i) => i !== idx))
   const updateVariant = (idx: number, v: ProductVariantBackend) =>
     setVariants((prev) => prev.map((x, i) => (i === idx ? v : x)))

@@ -243,18 +243,26 @@ export function OrderDetailPage() {
                   <TableCell sx={{ verticalAlign: 'middle' }}>
                     {imageUrl ? (
                       <Box
-                        component="img"
-                        src={getUploadUrl(imageUrl)}
-                        alt=""
                         sx={{
                           width: 56,
                           height: 56,
-                          objectFit: 'cover',
                           borderRadius: 1,
                           border: 1,
                           borderColor: 'divider',
+                          bgcolor: 'action.hover',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          overflow: 'hidden',
                         }}
-                      />
+                      >
+                        <Box
+                          component="img"
+                          src={getUploadUrl(imageUrl)}
+                          alt=""
+                          sx={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                        />
+                      </Box>
                     ) : (
                       <Box
                         sx={{
