@@ -285,14 +285,19 @@ export function OrderDetailPage() {
                     <Typography variant="body2" fontWeight={500}>
                       {item.productName}
                     </Typography>
+                    {item.variantName && (
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        Обʼєм: {/^\d+$/.test(String(item.variantName).trim()) ? `${item.variantName} мл` : item.variantName}
+                      </Typography>
+                    )}
                   </TableCell>
                   <TableCell>
                     {item.variantName ? (
                       <Typography variant="body2" color="text.secondary">
-                        {item.variantName}
+                        {/^\d+$/.test(String(item.variantName).trim()) ? `${item.variantName} мл` : item.variantName}
                       </Typography>
                     ) : (
-                      '—'
+                      <Typography variant="body2" color="text.secondary">—</Typography>
                     )}
                   </TableCell>
                   <TableCell align="right">{formatPrice(item.price)}</TableCell>
