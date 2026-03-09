@@ -63,47 +63,61 @@ export async function createOrder(body: CreateOrderBody): Promise<OrderBackend> 
   })
 }
 
-/** Создать тестовый заказ из первого товара (для админки) */
-export async function createTestOrder(_accessToken: string): Promise<OrderBackend> {
-  const { getProducts } = await import('./products')
-  const products = await getProducts(true)
-  if (!products.length) {
-    throw new Error('Нет товаров. Сначала создайте товар.')
-  }
-  const product = products[0]
-  const productId = product._id ?? product.id ?? ''
-  if (!productId) {
-    throw new Error('Не удалось получить ID товара')
-  }
-  const hasVariants = product.variants && product.variants.length > 0
-  const body: CreateOrderBody = {
-    items: [
-      {
-        product: productId,
-        quantity: 2,
-        ...(hasVariants ? { variant: '0' } : {}),
-      },
-    ],
-    customer: {
-      firstName: 'Тест',
-      lastName: 'Тестов',
-      email: 'test@example.com',
-      phone: '+380501234567',
-    },
-    deliveryAddress: {
-      country: 'Украина',
-      city: 'Киев',
-      street: 'ул. Хрещатик',
-      building: '1',
-      apartment: '10',
-      postalCode: '01001',
-      notes: 'Тестовый заказ',
-    },
-    paymentMethod: 'cash',
-    deliveryMethod: 'courier',
-    notes: 'Тестовый заказ из админки',
-    deliveryCost: 50,
-    currency: 'UAH',
-  }
-  return createOrder(body)
+/** Создать тестовый заказ (бекенд: первый товар, 2 шт — в админку и в Telegram) */
+export async function createTestOrder(accessToken: string): Promise<OrderBackend> {
+  return request<OrderBackend>('orders/test', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  }, accessToken)
+}
+
+/** Формат ORDER_PAYLOAD з магазину (customer.fullName, items з variant, summary) */
+export interface OrderPayloadCustomer {
+  fullName?: string
+  email: string
+  phone: string
+  address?: string
+  city?: string
+  comment?: string
+}
+
+export interface OrderPayloadVariant {
+  name?: { ua?: string; ru?: string; en?: string }
+  price?: { current?: number; old?: number | null; currency?: string }
+  image?: string | null
+  isActive?: boolean
+  sku?: string
+  stock?: number
+}
+
+export interface OrderPayloadItem {
+  productId: string
+  title?: string
+  qty: number
+  price?: number
+  subtotal?: number
+  currency?: string
+  image?: string
+  variant?: OrderPayloadVariant
+}
+
+export interface OrderPayloadSummary {
+  totalItems?: number
+  totalPrice?: number
+  currency?: string
+}
+
+export interface OrderPayload {
+  customer: OrderPayloadCustomer
+  items: OrderPayloadItem[]
+  summary?: OrderPayloadSummary
+}
+
+/** Відправити замовлення в форматі ORDER_PAYLOAD (POST /orders/checkout). Публічний ендпоінт — заказ потрапляє в адмінку та в Telegram. */
+export async function submitOrderPayload(payload: OrderPayload): Promise<OrderBackend> {
+  return request<OrderBackend>('orders/checkout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
 }
